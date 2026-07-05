@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DecorVision AI</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback } = React;
+
+const STYLE_OPTIONS = [
+  "Let the AI decide",
+  "Modern minimalist",
+  "Warm & cozy traditional",
+  "Eclectic boho",
+  "Scandinavian",
+  "Moody & dramatic",
+];
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function ScanOverlay({ active }) {
+  if (!active) return null;
+  return (
+    <div className="scan-overlay">
+      <div className="scan-grid" />
+      <div className="scan-line" />
+      <div className="scan-dot d1" />
+      <div className="scan-dot d2" />
+      <div className="scan-dot d3" />
+      <div className="scan-dot d4" />
+    </div>
+  );
+}
+
+function Swatch({ color, index }) {
+  return (
+    <div className="swatch">
+      <div className="swatch-chip" style={{ background: color.hex }} />
+      <div className="swatch-meta">
+        <span className="swatch-num">{String(index + 1).padStart(2, "0")}</span>
+        <span className="swatch-name">{color.name}</span>
+        <span className="swatch-hex">{color.hex}</span>
+      </div>
+    </div>
+  );
+}
+
+function DecorVisionAI() {
+  const [imageB64, setImageB64] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
+  const [mediaType, setMediaType] = useState("image/jpeg");
+  const [stylePref, setStylePref] = useState(STYLE_OPTIONS[0]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const handleFile = useCallback(async (file) => {
+    if (!file) return;
+    setError(null);
+    setResult(null);
+    const b64 = await fileToBase64(file);
+    setImageB64(b64);
+    setMediaType(file.type || "image/jpeg");
+    setImageUrl(URL.createObjectURL(file));
+  }, []);
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    handleFile(file);
+  };
+
+  const analyze = async () => {
+    if (!imageB64) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageB64, mediaType, stylePref }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+      setResult(data);
+    } catch (e) {
+      setError("The plan didn't come through cleanly. Try again — sometimes a second read gets a better result.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = () => {
+    setImageB64(null);
+    setImageUrl(null);
+    setResult(null);
+    setError(null);
+  };
+
+  return (
+    <div className="app">
+      <div className="wrap">
+        <div className="eyebrow">DecorVision AI</div>
+        <h1>Show me your room.<br/>AI will tell you what it wants to become.</h1>
+        <p className="sub">
+          Upload a photo of any room. You'll get a written makeover plan — a color palette,
+          quick wins, and a shopping list — built from what's actually in your photo.
+        </p>
+
+        <div className="mat">
+          <div className={`dropzone ${imageUrl ? "has-image" : ""}`}>
+            {imageUrl ? (
+              <div className="photo-frame">
+                <img src={imageUrl} alt="Uploaded room" />
+                <ScanOverlay active={loading} />
+              </div>
+            ) : (
+              <>
+                <div className="dz-icon">↑</div>
+                <div className="dz-text">
+                  <b>Tap to upload</b> or drag a photo here<br/>JPG or PNG
+                </div>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              className="file-input-overlay"
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={onDrop}
+            />
+          </div>
+
+          <div className="controls">
+            <select value={stylePref} onChange={(e) => setStylePref(e.target.value)}>
+              {STYLE_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <button className="btn-primary" onClick={analyze} disabled={!imageB64 || loading}>
+              {loading ? "Reading the room…" : "Get my makeover plan"}
+            </button>
+            {imageUrl && (
+              <button className="btn-ghost" onClick={reset}>Start over</button>
+            )}
+          </div>
+
+          {error && <div className="error">{error}</div>}
+        </div>
+
+        {result && (
+          <div className="results">
+            <p className="section-label">The read</p>
+            <p className="room-read">{result.room_read}</p>
+            <p className="style-direction">{result.style_direction}</p>
+
+            <p className="section-label">Palette</p>
+            <div className="palette-row">
+              {(result.palette || []).map((c, i) => (
+                <Swatch key={i} color={c} index={i} />
+              ))}
+            </div>
+
+            <div className="two-col">
+              <div>
+                <p className="section-label">Quick wins</p>
+                <ul className="num-list">
+                  {(result.quick_wins || []).map((item, i) => (
+                    <li key={i}>
+                      <span className="n">{String(i + 1).padStart(2, "0")}</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="section-label">Bigger moves</p>
+                <ul className="num-list">
+                  {(result.bigger_moves || []).map((item, i) => (
+                    <li key={i}>
+                      <span className="n">{String(i + 1).padStart(2, "0")}</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <p className="section-label">Shopping list</p>
+            <ul className="shop-list">
+              {(result.shopping_list || []).map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+
+            <div className="footer-note">
+              DecorVision AI — a Trichanna Broughton design tool.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<DecorVisionAI />);
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
+
+  *{box-sizing:border-box;}
+  body{ margin:0; }
+  :root{
+    --paper:#F2ECE0;
+    --paper-dark:#E4DBC8;
+    --ink:#26231E;
+    --ink-soft:#5A564C;
+    --sage:#57624A;
+    --sage-deep:#3E4636;
+    --rust:#A65A34;
+    --brass:#B7965B;
+    --line: rgba(38,35,30,0.14);
+  }
+  .app{
+    min-height:100vh;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    padding: 40px 20px 80px;
+  }
+  .wrap{ max-width: 880px; margin: 0 auto; }
+  .eyebrow{
+    font-family:'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 10px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.05;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .sub{
+    font-size: 16px;
+    color: var(--ink-soft);
+    max-width: 520px;
+    line-height: 1.5;
+    margin-bottom: 36px;
+  }
+  .mat{
+    background: var(--paper-dark);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 18px;
+  }
+  .dropzone{
+    border: 1.5px dashed rgba(38,35,30,0.35);
+    border-radius: 2px;
+    min-height: 280px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap: 14px;
+    cursor: pointer;
+    position:relative;
+    overflow:hidden;
+    background: var(--paper);
+    transition: border-color .2s ease;
+  }
+  .file-input-overlay{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0;
+    cursor:pointer;
+  }
+  .dropzone.has-image .file-input-overlay{ z-index: 5; }
+  .dropzone:hover{ border-color: var(--sage); }
+  .dropzone.has-image{ border-style: solid; border-color: var(--line); }
+  .dz-icon{
+    width:44px;height:44px;
+    border-radius:50%;
+    border:1.5px solid var(--sage);
+    display:flex;align-items:center;justify-content:center;
+    color: var(--sage);
+    font-size: 20px;
+  }
+  .dz-text{ font-size:14px; color: var(--ink-soft); text-align:center; }
+  .dz-text b{ color: var(--ink); font-weight:600; }
+  .photo-frame{ position:relative; width:100%; }
+  .photo-frame img{
+    width:100%; display:block; border-radius: 1px;
+    max-height: 420px; object-fit: cover;
+  }
+  .scan-overlay{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .scan-grid{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(to right, rgba(87,98,74,0.28) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(87,98,74,0.28) 1px, transparent 1px);
+    background-size: 14.28% 14.28%;
+    opacity: 0;
+    animation: gridfade 2.4s ease forwards;
+  }
+  @keyframes gridfade{ 0%{opacity:0;} 30%{opacity:1;} 100%{opacity:0.5;} }
+  .scan-line{
+    position:absolute; left:0; right:0; height:2px;
+    background: linear-gradient(to right, transparent, var(--sage), transparent);
+    box-shadow: 0 0 14px 2px rgba(87,98,74,0.7);
+    animation: sweep 2.2s ease-in-out infinite;
+  }
+  @keyframes sweep{ 0%{ top:0%; } 50%{ top:100%; } 100%{ top:0%; } }
+  .scan-dot{
+    position:absolute; width:8px; height:8px; border-radius:50%;
+    background: var(--rust);
+    opacity:0;
+    animation: dotpop 2.2s ease-in-out infinite;
+  }
+  .d1{ top:22%; left:18%; animation-delay:0.3s; }
+  .d2{ top:58%; left:64%; animation-delay:0.9s; }
+  .d3{ top:74%; left:30%; animation-delay:1.4s; }
+  .d4{ top:38%; left:78%; animation-delay:1.8s; }
+  @keyframes dotpop{ 0%,100%{ opacity:0; transform:scale(0.5); } 50%{ opacity:1; transform:scale(1); } }
+  .controls{ margin-top: 22px; display:flex; flex-wrap:wrap; gap: 14px; align-items:center; }
+  select{
+    font-family:'Work Sans', sans-serif;
+    font-size: 14px;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  button{
+    font-family:'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 22px;
+    border-radius: 2px;
+    border: none;
+    cursor: pointer;
+    transition: transform .15s ease, opacity .15s ease;
+  }
+  button:active{ transform: scale(0.98); }
+  .btn-primary{ background: var(--sage); color: var(--paper); }
+  .btn-primary:hover{ background: var(--sage-deep); }
+  .btn-primary:disabled{ opacity:0.5; cursor:default; }
+  .btn-ghost{ background: transparent; color: var(--ink-soft); text-decoration: underline; padding: 12px 4px; }
+  .error{
+    margin-top: 18px; padding: 14px 16px;
+    border-left: 3px solid var(--rust);
+    background: rgba(166,90,52,0.08);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .results{ margin-top: 48px; }
+  .section-label{
+    font-family:'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brass);
+    margin: 0 0 10px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 10px;
+  }
+  .room-read{
+    font-family:'Fraunces', serif;
+    font-size: 20px;
+    line-height: 1.5;
+    margin: 0 0 6px;
+  }
+  .style-direction{ font-size: 14px; color: var(--rust); font-weight:600; margin-bottom: 32px; }
+  .palette-row{ display:flex; gap: 14px; flex-wrap:wrap; margin-bottom: 40px; }
+  .swatch{ width: 128px; }
+  .swatch-chip{ height: 90px; border-radius: 2px; border: 1px solid var(--line); }
+  .swatch-meta{ margin-top:8px; display:flex; flex-direction:column; gap:2px; }
+  .swatch-num{ font-family:'Space Mono', monospace; font-size:10px; color: var(--brass); }
+  .swatch-name{ font-size: 13px; font-weight:600; }
+  .swatch-hex{ font-family:'Space Mono', monospace; font-size:11px; color: var(--ink-soft); }
+  .two-col{ display:grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+  @media (max-width: 640px){ .two-col{ grid-template-columns: 1fr; gap: 28px; } }
+  .num-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px; }
+  .num-list li{ display:flex; gap: 12px; font-size: 14px; line-height:1.5; }
+  .num-list .n{ font-family:'Space Mono', monospace; color: var(--brass); font-size:12px; flex-shrink:0; padding-top:2px; }
+  .shop-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; }
+  .shop-list li{ padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height:1.5; }
+  .shop-list li:first-child{ border-top: 1px solid var(--line); }
+  .footer-note{ margin-top: 56px; font-size: 12px; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</body>
+</html>
