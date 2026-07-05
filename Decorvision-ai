@@ -1,0 +1,71 @@
+api/analyze.js
+// This runs on Vercel's server, not in the browser — so your API key stays hidden.
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const { imageB64, mediaType, stylePref } = req.body;
+
+  if (!imageB64) {
+    return res.status(400).json({ error: "No image provided" });
+  }
+
+  const prompt = `You are an interior designer reviewing a photo of a client's room. The client's stated style preference is: "${stylePref}".
+
+Look closely at the actual photo — its furniture, light, proportions, colors, and flaws — and write a makeover plan grounded in what you see, not generic advice.
+
+Respond with ONLY raw JSON (no markdown fences, no preamble), matching exactly this shape:
+{
+  "room_read": "2-3 sentences describing what you actually see and its main problem or opportunity",
+  "style_direction": "1 sentence naming the direction you're taking the room and why it fits",
+  "palette": [{"name": "string", "hex": "#RRGGBB"}, ... exactly 5 colors, grounded in what would actually work in this room],
+  "quick_wins": ["3-4 specific, low-cost changes ordered from easiest to most impactful, referencing actual objects in the photo where possible"],
+  "bigger_moves": ["2-3 larger changes (furniture, layout, lighting) that would transform the room"],
+  "shopping_list": ["4-6 specific items to look for, each with a short reason"]
+}`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: imageB64 } },
+              { type: "text", text: prompt },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Anthropic API error:", data);
+      return res.status(response.status).json({ error: data.error?.message || "Anthropic API error" });
+    }
+
+    const text = (data.content || [])
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join("")
+      .trim()
+      .replace(/^```json\s*/i, "")
+      .replace(/```$/i, "");
+
+    const parsed = JSON.parse(text);
+    return res.status(200).json(parsed);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Something went wrong analyzing the photo" });
+  }
+}
