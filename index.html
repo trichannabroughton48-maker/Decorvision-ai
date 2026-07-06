@@ -85,7 +85,8 @@ function DecorVisionAI() {
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
-    setError(null);
+    setError("The plan didn't come through cleanly. Try again — sometimes a second read gets a better result.");
+
     setResult(null);
     const b64 = await fileToBase64(file);
     setImageB64(b64);
