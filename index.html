@@ -80,7 +80,8 @@ function DecorVisionAI() {
   const [mediaType, setMediaType] = useState("image/jpeg");
   const [stylePref, setStylePref] = useState(STYLE_OPTIONS[0]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = setError("The plan didn't come through cleanly. Try again — sometimes a second read gets a better result.");
+;
   const [result, setResult] = useState(null);
 
   const handleFile = useCallback(async (file) => {
