@@ -80,14 +80,12 @@ function DecorVisionAI() {
   const [mediaType, setMediaType] = useState("image/jpeg");
   const [stylePref, setStylePref] = useState(STYLE_OPTIONS[0]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = setError("The plan didn't come through cleanly. Try again — sometimes a second read gets a better result.");
-;
+  const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
-    setError("The plan didn't come through cleanly. Try again — sometimes a second read gets a better result.");
-
+    setError(null);
     setResult(null);
     const b64 = await fileToBase64(file);
     setImageB64(b64);
@@ -119,7 +117,7 @@ function DecorVisionAI() {
       }
       setResult(data);
     } catch (e) {
-      setError("The plan didn't come through cleanly. Try again — sometimes a second read gets a better result.");
+      setError("Error: " + (e && e.message ? e.message : "unknown"));
     } finally {
       setLoading(false);
     }
