@@ -1,0 +1,76 @@
+// DecorVision AI — room makeover image generation
+// Calls Google's Gemini image model (Nano Banana 2).
+// Requires env var GEMINI_API_KEY set in Vercel.
+
+const MODEL = "gemini-3.1-flash-image"; // If Google renames this later, swap it here.
+
+module.exports = async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { imageB64, mediaType, style } = req.body || {};
+    if (!imageB64 || !style) {
+      return res.status(400).json({ error: "Missing photo or style." });
+    }
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "GEMINI_API_KEY is not set in Vercel." });
+    }
+
+    const prompt =
+      `Redesign this exact room in a "${style}" interior design style. ` +
+      `Replace the furniture, wall paint color, rug, lighting fixtures, window treatments, and decor ` +
+      `with new pieces that fit the style. Keep the room's architecture exactly the same: ` +
+      `same walls, windows, doors, ceiling, and flooring layout, and keep the same camera angle. ` +
+      `Photorealistic interior photography, natural light, magazine quality. ` +
+      `Do not add any text, labels, or watermarks to the image.`;
+
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { inline_data: { mime_type: mediaType || "image/jpeg", data: imageB64 } },
+                { text: prompt },
+              ],
+            },
+          ],
+        }),
+      }
+    );
+
+    const data = await r.json();
+
+    if (!r.ok) {
+      const msg = (data && data.error && data.error.message) || "Image service error.";
+      return res.status(502).json({ error: msg });
+    }
+
+    const parts =
+      (((data.candidates || [])[0] || {}).content || {}).parts || [];
+
+    let img = null;
+    let mt = "image/png";
+    for (const p of parts) {
+      const d = p.inlineData || p.inline_data;
+      if (d && d.data) {
+        img = d.data;
+        mt = d.mimeType || d.mime_type || mt;
+        break;
+      }
+    }
+
+    if (!img) {
+      return res.status(502).json({ error: "No image came back. Tap retry on that idea." });
+    }
+
+    return res.status(200).json({ imageB64: img, mediaType: mt });
+  } catch (e) {
+    return res.status(500).json({ error: (e && e.message) || "Server error." });
+  }
+};
