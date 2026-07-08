@@ -3,24 +3,236 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DecorVision AI</title>
+<title>DecorVision AI — See your room made over</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root {
+    --bg: #F1EDE6;
+    --card: #FFFFFF;
+    --ink: #26211B;
+    --ink-soft: #6B6259;
+    --line: #E2DBCF;
+    --accent: #31605B;
+    --accent-deep: #234742;
+    --gold: #C8913A;
+    --error: #A3402F;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Public Sans", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  /* Header */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .wordmark { font-family: "Fraunces", serif; font-weight: 700; font-size: 22px; letter-spacing: -0.01em; }
+  .wordmark em { font-style: normal; color: var(--accent); }
+  .meter {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px;
+    background: var(--card); border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 999px; color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .meter strong { color: var(--accent-deep); font-weight: 500; }
+
+  .hero {
+    font-family: "Fraunces", serif; font-weight: 600;
+    font-size: clamp(26px, 6.5vw, 36px); line-height: 1.15;
+    letter-spacing: -0.015em; margin-bottom: 8px;
+  }
+  .hero .swash { color: var(--gold); }
+  .sub { color: var(--ink-soft); margin-bottom: 24px; max-width: 46ch; }
+
+  /* Upload */
+  .drop {
+    background: var(--card); border: 1.5px dashed var(--line);
+    border-radius: var(--radius); padding: 28px 18px;
+    text-align: center; cursor: pointer; transition: border-color .2s;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-title { font-weight: 600; margin-bottom: 4px; }
+  .drop-hint { font-size: 13.5px; color: var(--ink-soft); }
+  .preview-wrap { position: relative; border-radius: var(--radius); overflow: hidden; background: #000; }
+  .preview-wrap img { width: 100%; display: block; }
+  .change-photo {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(255,255,255,.92); border: none; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    padding: 7px 13px; border-radius: 999px; color: var(--ink);
+  }
+
+  /* Style chips */
+  .section-label {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-soft); margin: 24px 0 10px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    padding: 9px 15px; border-radius: 999px; cursor: pointer;
+    background: var(--card); border: 1.5px solid var(--line); color: var(--ink);
+    transition: all .15s;
+  }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip:disabled { opacity: .45; cursor: default; }
+  .chips-hint { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+
+  /* Primary button */
+  .go {
+    display: block; width: 100%; margin-top: 22px;
+    background: var(--accent); color: #fff; border: none; cursor: pointer;
+    font-family: "Fraunces", serif; font-weight: 600; font-size: 18px;
+    padding: 16px; border-radius: var(--radius);
+    transition: background .15s;
+  }
+  .go:hover { background: var(--accent-deep); }
+  .go:disabled { background: #B9B2A6; cursor: default; }
+  .go-note { text-align: center; font-size: 13px; color: var(--ink-soft); margin-top: 10px; }
+
+  /* Idea cards */
+  .ideas { margin-top: 34px; display: flex; flex-direction: column; gap: 26px; }
+  .idea {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .idea-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 16px 10px;
+  }
+  .idea-style { font-family: "Fraunces", serif; font-weight: 600; font-size: 19px; }
+  .idea-num { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--gold); }
+
+  /* Before/after slider */
+  .ba { position: relative; width: 100%; background: #111; user-select: none; touch-action: none; }
+  .ba img { width: 100%; display: block; pointer-events: none; }
+  .ba-after { position: relative; }
+  .ba-before {
+    position: absolute; inset: 0;
+  }
+  .ba-before img { position: absolute; inset: 0; height: 100%; object-fit: cover; }
+  .ba-handle {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: #fff; box-shadow: 0 0 8px rgba(0,0,0,.5);
+  }
+  .ba-knob {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px; height: 34px; border-radius: 999px;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  }
+  .ba-tag {
+    position: absolute; top: 10px;
+    font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    background: rgba(0,0,0,.55); color: #fff;
+    padding: 4px 9px; border-radius: 999px; pointer-events: none;
+  }
+  .ba-tag.before { left: 10px; }
+  .ba-tag.after { right: 10px; }
+
+  /* Loading scan */
+  .scanbox { position: relative; width: 100%; aspect-ratio: 4/3; background: #17211F; overflow: hidden; }
+  .scanbox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; }
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #8FD4C6, transparent);
+    animation: scan 2.2s ease-in-out infinite;
+  }
+  @keyframes scan { 0%,100% { top: 8%; } 50% { top: 88%; } }
+  .scan-label {
+    position: absolute; bottom: 14px; left: 0; right: 0; text-align: center;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; color: #B8D8D0;
+  }
+  @media (prefers-reduced-motion: reduce) { .scan-line { animation: none; top: 50%; } }
+
+  /* Card actions & states */
+  .idea-actions { display: flex; gap: 8px; padding: 12px 16px 16px; flex-wrap: wrap; }
+  .btn {
+    font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    padding: 10px 15px; border-radius: 10px; border: 1.5px solid var(--line);
+    background: var(--card); color: var(--ink); transition: all .15s;
+  }
+  .btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .idea-error { padding: 20px 16px; }
+  .idea-error p { color: var(--error); font-size: 14.5px; margin-bottom: 12px; }
+
+  /* Plan */
+  .plan { border-top: 1px solid var(--line); padding: 18px 16px 20px; }
+  .plan h4 {
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .08em; color: var(--accent-deep);
+    margin: 18px 0 8px;
+  }
+  .plan h4:first-child { margin-top: 0; }
+  .plan p, .plan li { font-size: 14.5px; }
+  .plan ul { list-style: none; }
+  .plan li { padding: 8px 0; border-bottom: 1px solid #F0EBE1; }
+  .plan li:last-child { border-bottom: none; }
+  .plan .item-name { font-weight: 600; }
+  .plan .item-sub { color: var(--ink-soft); font-size: 13.5px; }
+  .plan .budget { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--gold); }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch { text-align: center; }
+  .swatch-chip { width: 52px; height: 52px; border-radius: 10px; border: 1px solid rgba(0,0,0,.08); }
+  .swatch-name { font-size: 11.5px; display: block; margin-top: 5px; max-width: 60px; }
+  .swatch-hex { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--ink-soft); }
+
+  .empty-cap {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 26px 20px; text-align: center; margin-top: 30px;
+  }
+  .empty-cap h3 { font-family: "Fraunces", serif; font-size: 20px; margin-bottom: 6px; }
+  .empty-cap p { color: var(--ink-soft); font-size: 14.5px; }
+
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; font-size: 14px;
+    padding: 11px 18px; border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    z-index: 50;
+  }
+  input[type="file"] { display: none; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useCallback } = React;
+const { useState, useRef, useCallback, useEffect } = React;
 
 const STYLE_OPTIONS = [
-  "Let the AI decide",
   "Modern minimalist",
   "Warm & cozy traditional",
   "Eclectic boho",
   "Scandinavian",
   "Moody & dramatic",
+  "Coastal calm",
 ];
+const DEFAULT_TRIO = ["Modern minimalist", "Warm & cozy traditional", "Eclectic boho"];
+const ROOMS_INCLUDED = 5;
+const IDEAS_PER_ROOM = 3;
+const LS_KEY = "dv_rooms_used";
+
+function roomsUsed() {
+  try { return parseInt(localStorage.getItem(LS_KEY) || "0", 10) || 0; } catch (e) { return 0; }
+}
+function bumpRoomsUsed() {
+  try { localStorage.setItem(LS_KEY, String(roomsUsed() + 1)); } catch (e) {}
+}
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -47,29 +259,126 @@ function fileToBase64(file) {
   });
 }
 
-function ScanOverlay({ active }) {
-  if (!active) return null;
+function BeforeAfter({ beforeUrl, afterUrl }) {
+  const [pos, setPos] = useState(55);
+  const boxRef = useRef(null);
+  const dragging = useRef(false);
+
+  const move = useCallback((clientX) => {
+    const box = boxRef.current;
+    if (!box) return;
+    const r = box.getBoundingClientRect();
+    let p = ((clientX - r.left) / r.width) * 100;
+    p = Math.max(2, Math.min(98, p));
+    setPos(p);
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!dragging.current) return;
+      move(e.touches ? e.touches[0].clientX : e.clientX);
+    };
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, [move]);
+
+  const start = (e) => {
+    dragging.current = true;
+    move(e.touches ? e.touches[0].clientX : e.clientX);
+  };
+
   return (
-    <div className="scan-overlay">
-      <div className="scan-grid" />
-      <div className="scan-line" />
-      <div className="scan-dot d1" />
-      <div className="scan-dot d2" />
-      <div className="scan-dot d3" />
-      <div className="scan-dot d4" />
+    <div
+      className="ba"
+      ref={boxRef}
+      onMouseDown={start}
+      onTouchStart={start}
+    >
+      <div className="ba-after">
+        <img src={afterUrl} alt="Room makeover idea" />
+      </div>
+      <div className="ba-before" style={{ clipPath: "inset(0 " + (100 - pos) + "% 0 0)" }}>
+        <img src={beforeUrl} alt="Original room" style={{ width: "100%" }} />
+      </div>
+      <div className="ba-handle" style={{ left: pos + "%" }}>
+        <div className="ba-knob">⇄</div>
+      </div>
+      <span className="ba-tag before">Before</span>
+      <span className="ba-tag after">After</span>
     </div>
   );
 }
 
-function Swatch({ color, index }) {
+function Swatch({ color }) {
   return (
     <div className="swatch">
       <div className="swatch-chip" style={{ background: color.hex }} />
-      <div className="swatch-meta">
-        <span className="swatch-num">{String(index + 1).padStart(2, "0")}</span>
-        <span className="swatch-name">{color.name}</span>
-        <span className="swatch-hex">{color.hex}</span>
-      </div>
+      <span className="swatch-name">{color.name}</span>
+      <span className="swatch-hex">{color.hex}</span>
+    </div>
+  );
+}
+
+function Plan({ plan }) {
+  return (
+    <div className="plan">
+      <h4>Room diagnosis</h4>
+      <p>{plan.diagnosis}</p>
+
+      {plan.palette && plan.palette.length > 0 && (
+        <React.Fragment>
+          <h4>Color palette</h4>
+          <div className="swatches">
+            {plan.palette.map((c, i) => <Swatch key={i} color={c} />)}
+          </div>
+        </React.Fragment>
+      )}
+
+      {plan.paint && plan.paint.length > 0 && (
+        <React.Fragment>
+          <h4>Paint</h4>
+          <ul>
+            {plan.paint.map((p, i) => (
+              <li key={i}>
+                <span className="item-name">{p.colorName} <span className="budget">{p.code}</span></span>
+                <div className="item-sub">{p.brand} — {p.surface}</div>
+              </li>
+            ))}
+          </ul>
+        </React.Fragment>
+      )}
+
+      {plan.furniture && plan.furniture.length > 0 && (
+        <React.Fragment>
+          <h4>Furniture & placement</h4>
+          <ul>
+            {plan.furniture.map((f, i) => (
+              <li key={i}>
+                <span className="item-name">{f.item}</span> <span className="budget">{f.budget}</span>
+                <div className="item-sub">{f.placement}</div>
+              </li>
+            ))}
+          </ul>
+        </React.Fragment>
+      )}
+
+      {plan.quickWins && plan.quickWins.length > 0 && (
+        <React.Fragment>
+          <h4>Quick wins under $50</h4>
+          <ul>
+            {plan.quickWins.map((q, i) => <li key={i}>{q}</li>)}
+          </ul>
+        </React.Fragment>
+      )}
     </div>
   );
 }
@@ -77,359 +386,257 @@ function Swatch({ color, index }) {
 function DecorVisionAI() {
   const [imageB64, setImageB64] = useState(null);
   const [imageUrl, setImageUrl] = useState(null);
-  const [mediaType, setMediaType] = useState("image/jpeg");
-  const [stylePref, setStylePref] = useState(STYLE_OPTIONS[0]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [picked, setPicked] = useState([]);
+  const [ideas, setIdeas] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [left, setLeft] = useState(Math.max(0, ROOMS_INCLUDED - roomsUsed()));
+  const [toast, setToast] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef(null);
+
+  const say = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  };
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
-    setError(null);
-    setResult(null);
-    const b64 = await fileToBase64(file);
-    setImageB64(b64);
-    setMediaType("image/jpeg");
-    setImageUrl(URL.createObjectURL(file));
+    try {
+      const b64 = await fileToBase64(file);
+      setImageB64(b64);
+      setImageUrl(URL.createObjectURL(file));
+      setIdeas([]);
+    } catch (e) {
+      say("That photo couldn't be read. Try another one.");
+    }
   }, []);
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    handleFile(file);
+  const toggleStyle = (s) => {
+    setPicked((prev) => {
+      if (prev.includes(s)) return prev.filter((x) => x !== s);
+      if (prev.length >= IDEAS_PER_ROOM) return prev;
+      return [...prev, s];
+    });
   };
 
-  const analyze = async () => {
-    if (!imageB64) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
+  const chosenTrio = () => {
+    const trio = [...picked];
+    for (const s of DEFAULT_TRIO) {
+      if (trio.length >= IDEAS_PER_ROOM) break;
+      if (!trio.includes(s)) trio.push(s);
+    }
+    for (const s of STYLE_OPTIONS) {
+      if (trio.length >= IDEAS_PER_ROOM) break;
+      if (!trio.includes(s)) trio.push(s);
+    }
+    return trio.slice(0, IDEAS_PER_ROOM);
+  };
 
+  const generateOne = async (style, index) => {
+    setIdeas((prev) => prev.map((it, i) => i === index ? { ...it, status: "loading", error: null } : it));
     try {
-      const response = await fetch("/api/analyze", {
+      const r = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageB64, mediaType, stylePref }),
+        body: JSON.stringify({ imageB64, mediaType: "image/jpeg", style }),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Request failed");
-      }
-      setResult(data);
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Generation failed");
+      setIdeas((prev) => prev.map((it, i) =>
+        i === index
+          ? { ...it, status: "done", afterUrl: "data:" + data.mediaType + ";base64," + data.imageB64 }
+          : it
+      ));
     } catch (e) {
-      setError("Error: " + (e && e.message ? e.message : "unknown"));
-    } finally {
-      setLoading(false);
+      setIdeas((prev) => prev.map((it, i) =>
+        i === index ? { ...it, status: "error", error: e.message } : it
+      ));
     }
   };
 
-  const reset = () => {
-    setImageB64(null);
-    setImageUrl(null);
-    setResult(null);
-    setError(null);
+  const startMakeover = async () => {
+    if (!imageB64 || busy) return;
+    if (left <= 0) return;
+    setBusy(true);
+    bumpRoomsUsed();
+    setLeft(Math.max(0, ROOMS_INCLUDED - roomsUsed()));
+    const trio = chosenTrio();
+    setIdeas(trio.map((s) => ({
+      style: s, status: "loading", afterUrl: null, error: null,
+      plan: null, planStatus: "idle", planError: null,
+    })));
+    await Promise.all(trio.map((s, i) => generateOne(s, i)));
+    setBusy(false);
   };
 
+  const getPlan = async (index) => {
+    const idea = ideas[index];
+    if (!idea || idea.planStatus === "loading") return;
+    setIdeas((prev) => prev.map((it, i) => i === index ? { ...it, planStatus: "loading", planError: null } : it));
+    try {
+      const r = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageB64, mediaType: "image/jpeg", style: idea.style }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Plan failed");
+      setIdeas((prev) => prev.map((it, i) => i === index ? { ...it, planStatus: "done", plan: data.plan } : it));
+    } catch (e) {
+      setIdeas((prev) => prev.map((it, i) => i === index ? { ...it, planStatus: "error", planError: e.message } : it));
+    }
+  };
+
+  const download = (idea) => {
+    const a = document.createElement("a");
+    a.href = idea.afterUrl;
+    a.download = "makeover-" + idea.style.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".png";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    say("Image saved.");
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    handleFile(f);
+  };
+
+  const capReached = left <= 0;
+
   return (
-    <div className="app">
-      <div className="wrap">
-        <div className="eyebrow">DecorVision AI</div>
-        <h1>Show me your room.<br/>AI will tell you what it wants to become.</h1>
-        <p className="sub">
-          Upload a photo of any room. You'll get a written makeover plan — a color palette,
-          quick wins, and a shopping list — built from what's actually in your photo.
-        </p>
-
-        <div className="mat">
-          <div className={`dropzone ${imageUrl ? "has-image" : ""}`}>
-            {imageUrl ? (
-              <div className="photo-frame">
-                <img src={imageUrl} alt="Uploaded room" />
-                <ScanOverlay active={loading} />
-              </div>
-            ) : (
-              <>
-                <div className="dz-icon">↑</div>
-                <div className="dz-text">
-                  <b>Tap to upload</b> or drag a photo here<br/>JPG or PNG
-                </div>
-              </>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              className="file-input-overlay"
-              onChange={(e) => handleFile(e.target.files?.[0])}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={onDrop}
-            />
-          </div>
-
-          <div className="controls">
-            <select value={stylePref} onChange={(e) => setStylePref(e.target.value)}>
-              {STYLE_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            <button className="btn-primary" onClick={analyze} disabled={!imageB64 || loading}>
-              {loading ? "Reading the room…" : "Get my makeover plan"}
-            </button>
-            {imageUrl && (
-              <button className="btn-ghost" onClick={reset}>Start over</button>
-            )}
-          </div>
-
-          {error && <div className="error">{error}</div>}
-        </div>
-
-        {result && (
-          <div className="results">
-            <p className="section-label">The read</p>
-            <p className="room-read">{result.room_read}</p>
-            <p className="style-direction">{result.style_direction}</p>
-
-            <p className="section-label">Palette</p>
-            <div className="palette-row">
-              {(result.palette || []).map((c, i) => (
-                <Swatch key={i} color={c} index={i} />
-              ))}
-            </div>
-
-            <div className="two-col">
-              <div>
-                <p className="section-label">Quick wins</p>
-                <ul className="num-list">
-                  {(result.quick_wins || []).map((item, i) => (
-                    <li key={i}>
-                      <span className="n">{String(i + 1).padStart(2, "0")}</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <p className="section-label">Bigger moves</p>
-                <ul className="num-list">
-                  {(result.bigger_moves || []).map((item, i) => (
-                    <li key={i}>
-                      <span className="n">{String(i + 1).padStart(2, "0")}</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <p className="section-label">Shopping list</p>
-            <ul className="shop-list">
-              {(result.shopping_list || []).map((item, i) => (
-                <li key={i}>{item}</li>
-              ))}
-            </ul>
-
-            <div className="footer-note">
-              DecorVision AI — a Trichanna Broughton design tool.
-            </div>
-          </div>
-        )}
+    <div className="wrap">
+      <div className="topbar">
+        <div className="wordmark">Decor<em>Vision</em> AI</div>
+        <div className="meter"><strong>{left}</strong> of {ROOMS_INCLUDED} rooms left</div>
       </div>
+
+      <h1 className="hero">Your room, <span className="swash">three new ways.</span></h1>
+      <p className="sub">Upload a photo of your room and get three makeover ideas — new furniture, paint, and decor, shown in your actual space.</p>
+
+      {!imageUrl ? (
+        <div
+          className={"drop" + (dragOver ? " over" : "")}
+          onClick={() => fileRef.current && fileRef.current.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="drop-icon">📷</div>
+          <div className="drop-title">Add a photo of your room</div>
+          <div className="drop-hint">Tap to take a photo or choose one from your library</div>
+        </div>
+      ) : (
+        <div className="preview-wrap">
+          <img src={imageUrl} alt="Your room" />
+          <button className="change-photo" onClick={() => fileRef.current && fileRef.current.click()}>
+            Change photo
+          </button>
+        </div>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => handleFile(e.target.files && e.target.files[0])}
+      />
+
+      <div className="section-label">Pick up to 3 styles — or leave it to us</div>
+      <div className="chips">
+        {STYLE_OPTIONS.map((s) => (
+          <button
+            key={s}
+            className={"chip" + (picked.includes(s) ? " on" : "")}
+            onClick={() => toggleStyle(s)}
+            disabled={!picked.includes(s) && picked.length >= IDEAS_PER_ROOM}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <div className="chips-hint">
+        {picked.length === 0
+          ? "No picks? You'll get " + DEFAULT_TRIO.join(", ") + "."
+          : picked.length < IDEAS_PER_ROOM
+            ? "We'll fill the remaining " + (IDEAS_PER_ROOM - picked.length) + " with our favorites."
+            : "Three styles picked."}
+      </div>
+
+      {capReached && ideas.length === 0 ? (
+        <div className="empty-cap">
+          <h3>You've used all {ROOMS_INCLUDED} room makeovers</h3>
+          <p>This purchase includes {ROOMS_INCLUDED} rooms ({ROOMS_INCLUDED * IDEAS_PER_ROOM} makeover images). Grab a refill pack on Gumroad to keep going.</p>
+        </div>
+      ) : (
+        <React.Fragment>
+          <button className="go" onClick={startMakeover} disabled={!imageB64 || busy || capReached}>
+            {busy ? "Designing your ideas…" : "Show me 3 ideas"}
+          </button>
+          <div className="go-note">Each room uses 1 of your {ROOMS_INCLUDED} included makeovers.</div>
+        </React.Fragment>
+      )}
+
+      <div className="ideas">
+        {ideas.map((idea, i) => (
+          <div className="idea" key={i}>
+            <div className="idea-head">
+              <span className="idea-style">{idea.style}</span>
+              <span className="idea-num">Idea {String(i + 1).padStart(2, "0")}</span>
+            </div>
+
+            {idea.status === "loading" && (
+              <div className="scanbox">
+                {imageUrl && <img src={imageUrl} alt="" />}
+                <div className="scan-line" />
+                <div className="scan-label">Reimagining your room…</div>
+              </div>
+            )}
+
+            {idea.status === "error" && (
+              <div className="idea-error">
+                <p>{idea.error}</p>
+                <button className="btn primary" onClick={() => generateOne(idea.style, i)}>Retry this idea</button>
+              </div>
+            )}
+
+            {idea.status === "done" && (
+              <React.Fragment>
+                <BeforeAfter beforeUrl={imageUrl} afterUrl={idea.afterUrl} />
+                <div className="idea-actions">
+                  <button
+                    className="btn primary"
+                    onClick={() => getPlan(i)}
+                    disabled={idea.planStatus === "loading" || idea.planStatus === "done"}
+                  >
+                    {idea.planStatus === "loading" ? "Building plan…"
+                      : idea.planStatus === "done" ? "Plan ready below"
+                      : "Get the shopping plan"}
+                  </button>
+                  <button className="btn" onClick={() => download(idea)}>Save image</button>
+                </div>
+                {idea.planStatus === "error" && (
+                  <div className="idea-error">
+                    <p>{idea.planError}</p>
+                    <button className="btn" onClick={() => getPlan(i)}>Retry plan</button>
+                  </div>
+                )}
+                {idea.planStatus === "done" && idea.plan && <Plan plan={idea.plan} />}
+              </React.Fragment>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<DecorVisionAI />);
 </script>
-
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
-
-  *{box-sizing:border-box;}
-  body{ margin:0; }
-  :root{
-    --paper:#F2ECE0;
-    --paper-dark:#E4DBC8;
-    --ink:#26231E;
-    --ink-soft:#5A564C;
-    --sage:#57624A;
-    --sage-deep:#3E4636;
-    --rust:#A65A34;
-    --brass:#B7965B;
-    --line: rgba(38,35,30,0.14);
-  }
-  .app{
-    min-height:100vh;
-    background:var(--paper);
-    color:var(--ink);
-    font-family:'Work Sans', sans-serif;
-    padding: 40px 20px 80px;
-  }
-  .wrap{ max-width: 880px; margin: 0 auto; }
-  .eyebrow{
-    font-family:'Space Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--rust);
-    margin-bottom: 10px;
-  }
-  h1{
-    font-family:'Fraunces', serif;
-    font-weight: 500;
-    font-style: italic;
-    font-size: clamp(32px, 5vw, 52px);
-    line-height: 1.05;
-    margin: 0 0 14px;
-    letter-spacing: -0.01em;
-  }
-  .sub{
-    font-size: 16px;
-    color: var(--ink-soft);
-    max-width: 520px;
-    line-height: 1.5;
-    margin-bottom: 36px;
-  }
-  .mat{
-    background: var(--paper-dark);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    padding: 18px;
-  }
-  .dropzone{
-    border: 1.5px dashed rgba(38,35,30,0.35);
-    border-radius: 2px;
-    min-height: 280px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-direction:column;
-    gap: 14px;
-    cursor: pointer;
-    position:relative;
-    overflow:hidden;
-    background: var(--paper);
-    transition: border-color .2s ease;
-  }
-  .file-input-overlay{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    opacity:0;
-    cursor:pointer;
-  }
-  .dropzone.has-image .file-input-overlay{ z-index: 5; }
-  .dropzone:hover{ border-color: var(--sage); }
-  .dropzone.has-image{ border-style: solid; border-color: var(--line); }
-  .dz-icon{
-    width:44px;height:44px;
-    border-radius:50%;
-    border:1.5px solid var(--sage);
-    display:flex;align-items:center;justify-content:center;
-    color: var(--sage);
-    font-size: 20px;
-  }
-  .dz-text{ font-size:14px; color: var(--ink-soft); text-align:center; }
-  .dz-text b{ color: var(--ink); font-weight:600; }
-  .photo-frame{ position:relative; width:100%; }
-  .photo-frame img{
-    width:100%; display:block; border-radius: 1px;
-    max-height: 420px; object-fit: cover;
-  }
-  .scan-overlay{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
-  .scan-grid{
-    position:absolute; inset:0;
-    background-image:
-      linear-gradient(to right, rgba(87,98,74,0.28) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(87,98,74,0.28) 1px, transparent 1px);
-    background-size: 14.28% 14.28%;
-    opacity: 0;
-    animation: gridfade 2.4s ease forwards;
-  }
-  @keyframes gridfade{ 0%{opacity:0;} 30%{opacity:1;} 100%{opacity:0.5;} }
-  .scan-line{
-    position:absolute; left:0; right:0; height:2px;
-    background: linear-gradient(to right, transparent, var(--sage), transparent);
-    box-shadow: 0 0 14px 2px rgba(87,98,74,0.7);
-    animation: sweep 2.2s ease-in-out infinite;
-  }
-  @keyframes sweep{ 0%{ top:0%; } 50%{ top:100%; } 100%{ top:0%; } }
-  .scan-dot{
-    position:absolute; width:8px; height:8px; border-radius:50%;
-    background: var(--rust);
-    opacity:0;
-    animation: dotpop 2.2s ease-in-out infinite;
-  }
-  .d1{ top:22%; left:18%; animation-delay:0.3s; }
-  .d2{ top:58%; left:64%; animation-delay:0.9s; }
-  .d3{ top:74%; left:30%; animation-delay:1.4s; }
-  .d4{ top:38%; left:78%; animation-delay:1.8s; }
-  @keyframes dotpop{ 0%,100%{ opacity:0; transform:scale(0.5); } 50%{ opacity:1; transform:scale(1); } }
-  .controls{ margin-top: 22px; display:flex; flex-wrap:wrap; gap: 14px; align-items:center; }
-  select{
-    font-family:'Work Sans', sans-serif;
-    font-size: 14px;
-    padding: 11px 14px;
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    background: var(--paper);
-    color: var(--ink);
-  }
-  button{
-    font-family:'Work Sans', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 12px 22px;
-    border-radius: 2px;
-    border: none;
-    cursor: pointer;
-    transition: transform .15s ease, opacity .15s ease;
-  }
-  button:active{ transform: scale(0.98); }
-  .btn-primary{ background: var(--sage); color: var(--paper); }
-  .btn-primary:hover{ background: var(--sage-deep); }
-  .btn-primary:disabled{ opacity:0.5; cursor:default; }
-  .btn-ghost{ background: transparent; color: var(--ink-soft); text-decoration: underline; padding: 12px 4px; }
-  .error{
-    margin-top: 18px; padding: 14px 16px;
-    border-left: 3px solid var(--rust);
-    background: rgba(166,90,52,0.08);
-    font-size: 14px;
-    color: var(--ink);
-  }
-  .results{ margin-top: 48px; }
-  .section-label{
-    font-family:'Space Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--brass);
-    margin: 0 0 10px;
-    border-bottom: 1px solid var(--line);
-    padding-bottom: 10px;
-  }
-  .room-read{
-    font-family:'Fraunces', serif;
-    font-size: 20px;
-    line-height: 1.5;
-    margin: 0 0 6px;
-  }
-  .style-direction{ font-size: 14px; color: var(--rust); font-weight:600; margin-bottom: 32px; }
-  .palette-row{ display:flex; gap: 14px; flex-wrap:wrap; margin-bottom: 40px; }
-  .swatch{ width: 128px; }
-  .swatch-chip{ height: 90px; border-radius: 2px; border: 1px solid var(--line); }
-  .swatch-meta{ margin-top:8px; display:flex; flex-direction:column; gap:2px; }
-  .swatch-num{ font-family:'Space Mono', monospace; font-size:10px; color: var(--brass); }
-  .swatch-name{ font-size: 13px; font-weight:600; }
-  .swatch-hex{ font-family:'Space Mono', monospace; font-size:11px; color: var(--ink-soft); }
-  .two-col{ display:grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-  @media (max-width: 640px){ .two-col{ grid-template-columns: 1fr; gap: 28px; } }
-  .num-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:14px; }
-  .num-list li{ display:flex; gap: 12px; font-size: 14px; line-height:1.5; }
-  .num-list .n{ font-family:'Space Mono', monospace; color: var(--brass); font-size:12px; flex-shrink:0; padding-top:2px; }
-  .shop-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; }
-  .shop-list li{ padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height:1.5; }
-  .shop-list li:first-child{ border-top: 1px solid var(--line); }
-  .footer-note{ margin-top: 56px; font-size: 12px; color: var(--ink-soft); border-top: 1px solid var(--line); padding-top: 18px; }
-</style>
 </body>
 </html>
